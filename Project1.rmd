@@ -19,7 +19,7 @@ do step 1 and 2
 mySheet <- sheet1 %>% 
   select(ends_with('D'), 'STCOU', 'Area_name') %>% 
   rename('area_name' = 'Area_name') %>% 
-  pivot_longer(cols = 1:10, names_to = 'itemID', values_to = 'enrollment')
+  pivot_longer(cols = 1:10, names_to = 'itemID', values_to = 'measurement')
 ```
 
 function for step 1 and 2
@@ -27,7 +27,7 @@ function for step 1 and 2
 selectLong <- function(x,...) {
   mysheet2 <- select(x, ends_with('D'), 'STCOU', 'Area_name') %>% 
     rename('area_name' = 'Area_name') %>% 
-    pivot_longer(cols = 1:10, names_to = 'itemID', values_to = 'enrollment')
+    pivot_longer(cols = 1:10, names_to = 'itemID', values_to = 'measurement')
   mysheet2
 }
 mysheet2<- selectLong(sheet1)
@@ -39,8 +39,8 @@ do step 3
 yr <-substr(mysheet2$itemID, 8,9)
 year2d<- as.numeric(yr)
 year <- ifelse(year2d > 11, year2d+1900, year2d+2000)
-measurement <- substr(mysheet2$itemID, 1, 7)
-mysheetfull <- cbind(mysheet2, year, measurement)
+measurementType <- substr(mysheet2$itemID, 1, 7)
+mysheetfull <- cbind(mysheet2, year, measurementType)
 
 ```
 
@@ -53,7 +53,7 @@ step3 <- function(x,y) {
   year2d<- as.numeric(yr)
   year <- ifelse(year2d > 11, year2d + 1900, year2d + 2000)
   measurement <- substr(y, 1, 7)
-  full2 <- cbind(x, year, measurement)
+  full2 <- cbind(x, year, measurementType)
   full2
 }
 ```
@@ -170,7 +170,7 @@ my_wrapper <- function(url){
 data1 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv")
 data2 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv")
 ```
- creat function for combining data 
+ create function for combining data 
  
 ```{r}
 combine <- function(tibble1_1, tibble1_2, tibble2_1, tibble2_2 ) {
@@ -191,7 +191,7 @@ plot state
 ```{r}
 enrollmeans <- totals$statetotal %>% 
   group_by(year, division)  %>% 
-  summarise(avgEnroll = mean(enrollment)) %>% 
+  summarise(avgEnroll = mean(measurement)) %>% 
   filter(division != 'ERROR')
 ggplot(enrollmeans, aes(year, avgEnroll, color = division)) + geom_line()
 
@@ -199,7 +199,7 @@ ggplot(enrollmeans, aes(year, avgEnroll, color = division)) + geom_line()
 
 create state plotting function
 ```{r}
-plot.state <- function(df, var_name = "enrollment") {
+plot.state <- function(df, var_name = "measurement") {
   enrollmeans <- df %>% 
   group_by(year, division)  %>% 
   summarise(avg = mean(get(var_name))) %>% 
@@ -215,7 +215,7 @@ plot.state(totals$statetotal)
 
 create function for plotting county
 ```{r}
-plot.county <- function(df, st = 'AL', top = TRUE, var_name = "enrollment", x = 5){
+plot.county <- function(df, st = 'AL', top = TRUE, var_name = "measurement", x = 5){
   enrollcounty <- df %>% 
     filter(stateAbbrv == st) %>% 
     group_by(area_name, year) %>% 
@@ -241,7 +241,7 @@ other tests for county plots
   enrollmeans <- totals$countytotal %>% 
     filter(stateAbbrv == "AL") %>% 
     group_by(area_name, year) %>% 
-    mutate(avg = mean(enrollment)) %>% 
+    mutate(avg = mean(measurement)) %>% 
     #ifelse(order == "Top", 
            arrange(avg) #ifelse(order == "Bottom", arrange(avg)) )
           # ifelse(get(order) == "Bottom", arrange(avg), stop('ERROR')))
@@ -288,4 +288,19 @@ plot.county(totalPST$countytotal, st= "TX", top = FALSE, x=12)
 plot.county(totalPST$countytotal)
 #state=NY, group=top, number looked at being 6
 plot.county(totalPST$countytotal, st= "NY", top = TRUE, x=6)
-``
+```
+plot PST state
+```{r}
+plot.state(totalPST$statetotal)
+```
+plot PST county
+```{r}
+#state=PA, group=top, number looked at being 5
+plot.county(totalPST$countytotal, st= "PA", top = TRUE, x=5)
+#state=TX, group=bottom, number looked at being 12
+plot.county(totalPST$countytotal, st= "TX", top = FALSE, x=12)
+#defaults
+plot.county(totalPST$countytotal)
+#state=NY, group=top, number looked at being 6
+plot.county(totalPST$countytotal, st= "NY", top = TRUE, x=6)
+```
