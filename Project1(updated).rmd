@@ -1,0 +1,348 @@
+---
+title: "Project 1"
+author: "Rachel Fellman and Sabrina Dahl"
+output:   
+  html_document:
+    toc: TRUE
+    toc_depth: 3
+    toc_float: TRUE
+    code_folding: show
+    theme: "readable"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Data Processing
+
+Read in Data
+
+```{r, message=FALSE}
+library(readr)
+sheet1 <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv")
+```
+
+### Step 1 and 2 
+
+```{r, eval = FALSE}
+mySheet <- sheet1 %>% 
+  select(ends_with('D'), 'STCOU', 'Area_name') %>% 
+  rename('area_name' = 'Area_name') %>% 
+  pivot_longer(cols = 1:10, names_to = 'itemID', values_to = 'measurement')
+```
+
+Function for step 1 and 2
+
+```{r}
+selectLong <- function(x,...) {
+  mysheet2 <- select(x, ends_with('D'), 'STCOU', 'Area_name') %>% 
+    rename('area_name' = 'Area_name') %>% 
+    pivot_longer(cols = 1:10, names_to = 'itemID', values_to = 'measurement')
+  mysheet2
+}
+```
+
+Test Step 1 & 2
+
+```{r,  eval=FALSE}
+mysheet2<- selectLong(sheet1)
+```
+
+
+### Step 3
+
+```{r,  eval=FALSE}
+yr <-substr(mysheet2$itemID, 8,9)
+year2d<- as.numeric(yr)
+year <- ifelse(year2d > 11, year2d+1900, year2d+2000)
+measurementType <- substr(mysheet2$itemID, 1, 7)
+mySheetFull <- cbind(mysheet2, year, measurementType)
+
+```
+
+Function for step 3
+
+```{r}
+step3 <- function(x,y) {
+  yr <-substr(y, 8,9)
+  year2d<- as.numeric(yr)
+  year <- ifelse(year2d > 11, year2d + 1900, year2d + 2000)
+  measurementType <- substr(y, 1, 7)
+  full2 <- cbind(x, year, measurementType)
+}
+```
+
+Test step 3
+
+```{r, eval=FALSE }
+full2<- step3(mysheet2, mysheet2$itemID)
+```
+
+### Step 4
+
+```{r,  eval=FALSE}
+ county <-  grep(pattern = ", \\w\\w", full2$area_name)
+  state <- grep(pattern = ", \\w\\w", full2$area_name, invert = TRUE)
+countydata <- full2[county,]
+statedata <- full2[state,]
+class(countydata) <- c("county", class(countydata))
+class(statedata) <- c("state", class(statedata))
+
+
+```
+
+Function for Step 4
+
+```{r}
+step4 <- function(x,y){
+  county <-  grep(pattern = ", \\w\\w", x)
+  state <- grep(pattern = ", \\w\\w", x, invert = TRUE)
+  countydata <- as_tibble(y[county,])
+  statedata <- as_tibble(y[state,])
+  class(countydata) <- c("county", class(countydata))
+  class(statedata) <- c("state", class(statedata))
+  return(list(countydata = countydata, statedata = statedata))
+}
+```
+
+Test Step 4
+
+```{r, eval=FALSE}
+countystate <- step4(full2$area_name, full2)
+```
+
+### Step 5
+
+```{r,  eval=FALSE}
+countystate$countydata %>% 
+mutate(stateabbrv = str_sub(area_name, -2))
+
+```
+
+Function for Step 5
+
+```{r}
+step5 <- function(x,y){
+  stateAbbrv <- str_sub(y, -2)
+  countynew <- cbind(x, stateAbbrv)
+}
+```
+
+Test Step 5
+
+```{r,  eval=FALSE}
+countyst <- step5(countystate$countydata, countystate$countydata$area_name)
+```
+
+### Step 6
+
+```{r, eval=FALSE}
+mystatedata <- countystate$statedata %>% 
+  mutate(division = if_else(area_name %in% c('CONNECTICUT', 'MAINE', 'MASSACHUSETTS', 'NEW HAMPSHIRE', 'RHODE ISLAND', 'VERMONT'), 'New England',
+                            if_else(area_name %in% c('NEW JERSEY', 'NEW YORK', 'PENNSYLVANIA'), 'Middle Atlantic',
+                                    if_else(area_name %in% c('ILLINOIS', 'INDIANA', 'MICHIGAN', 'OHIO', 'WISCONSIN'), 'East North Central',
+                                            if_else(area_name %in% c('IOWA', 'KANSAS', 'MINNESOTA', 'MISSOURI', 'NEBRASKA', 'NORTH DAKOTA', 'SOUTH DAKOTA'), 'West North Central',
+                                                    if_else(area_name %in% c('DELAWARE', 'FLORIDA', 'GEORGIA', 'MARYLAND', 'NORTH CAROLINA', 'SOUTH CAROLINA', 'VIRGINIA', 'DISTRICT OF COLUMBIA', 'District of Columbia', 'WEST VIRGINIA'), 'South Atlantic',
+                                                            if_else(area_name %in% c('ALABAMA', 'KENTUCKY', 'MISSISSIPPI', 'TENNESSEE'), 'East South Central',
+                                                                    if_else(area_name %in% c('ARKANSAS', 'LOUISIANA', 'OKLAHOMA', 'TEXAS'), 'West South Central',
+                                                                            if_else(area_name %in% c('ARIZONA', 'COLORADO', 'IDAHO', 'MONTANA', 'NEVADA', 'NEW MEXICO', 'UTAH', 'WYOMING'), 'Mountain',
+                                                                                    if_else(area_name %in% c('ALASKA', 'CALIFORNIA', 'HAWAII', 'OREGON', 'WASHINGTON'), 'Pacific', 'ERROR'))))))))))
+```
+
+Function for Step 6
+
+```{r}
+step6 <- function(x,y){
+x %>% 
+  mutate(division = if_else(y %in% c('CONNECTICUT', 'MAINE', 'MASSACHUSETTS', 'NEW HAMPSHIRE', 'RHODE ISLAND', 'VERMONT'), 'New England',
+                            if_else(y %in% c('NEW JERSEY', 'NEW YORK', 'PENNSYLVANIA'), 'Middle Atlantic',
+                                    if_else(y %in% c('ILLINOIS', 'INDIANA', 'MICHIGAN', 'OHIO', 'WISCONSIN'), 'East North Central',
+                                            if_else(y %in% c('IOWA', 'KANSAS', 'MINNESOTA', 'MISSOURI', 'NEBRASKA', 'NORTH DAKOTA', 'SOUTH DAKOTA'), 'West North Central',
+                                                    if_else(y %in% c('DELAWARE', 'FLORIDA', 'GEORGIA', 'MARYLAND', 'NORTH CAROLINA', 'SOUTH CAROLINA', 'VIRGINIA', 'DISTRICT OF COLUMBIA', 'District of Columbia', 'WEST VIRGINIA'), 'South Atlantic',
+                                                            if_else(y %in% c('ALABAMA', 'KENTUCKY', 'MISSISSIPPI', 'TENNESSEE'), 'East South Central',
+                                                                    if_else(y %in% c('ARKANSAS', 'LOUISIANA', 'OKLAHOMA', 'TEXAS'), 'West South Central',
+                                                                            if_else(y %in% c('ARIZONA', 'COLORADO', 'IDAHO', 'MONTANA', 'NEVADA', 'NEW MEXICO', 'UTAH', 'WYOMING'), 'Mountain',
+                                                                                    if_else(y %in% c('ALASKA', 'CALIFORNIA', 'HAWAII', 'OREGON', 'WASHINGTON'), 'Pacific', 'ERROR'))))))))))
+}
+```
+
+Test Step 6
+
+```{r, eval=FALSE}
+statediv <- step6(countystate$statedata, countystate$statedata$area_name)
+```
+
+Read in Sheet2
+```{r, message = FALSE}
+sheet2 <- read_csv("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv")
+```
+
+### Wrapper Function
+
+Create wrapper function using above functions that outputs a list of 2 tibbles.
+
+```{r}
+my_wrapper <- function(url){
+  sheet1 <- read_csv(url)
+  mysheet2<- selectLong(sheet1)
+  full2<- step3(mysheet2, mysheet2$itemID)
+  countystate <- step4(full2$area_name, full2)
+  countyst <- step5(countystate$countydata, countystate$countydata$area_name)
+  statediv <- step6(countystate$statedata, countystate$statedata$area_name)
+  return(list(county = countyst, state = statediv))
+  
+}
+```
+
+Use wrapper function to read in data sets.
+
+```{r, message=FALSE}
+data1 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01a.csv")
+data2 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/EDU01b.csv")
+```
+
+# Combine Data
+
+### Function for Combining Data
+ 
+```{r}
+combine <- function(tibble1_1, tibble1_2, tibble2_1, tibble2_2 ) {
+  county<- as.data.frame(bind_rows(tibble1_1, tibble2_1))
+  state <- as.data.frame(bind_rows(tibble1_2, tibble2_2))
+  return(list(countytotal = county, statetotal = state))
+}
+```
+
+Run Combine Function
+
+```{r}
+totals1_2 <- combine(data1$county, data1$state, data2$county, data2$state)
+```
+
+# Summarize Data
+
+### Plot State Data
+
+```{r, eval=FALSE}
+enrollmeans <- totals$statetotal %>% 
+  group_by(year, division)  %>% 
+  summarise(avgEnroll = mean(measurement)) %>% 
+  filter(division != 'ERROR')
+ggplot(enrollmeans, aes(year, avgEnroll, color = division)) + geom_line()
+
+```
+
+Create State Plotting Function
+
+```{r}
+plot.state <- function(df, var_name = "measurement") {
+  enrollmeans <- df %>% 
+  group_by(year, division)  %>% 
+  summarise(avg = mean(get(var_name))) %>% 
+  filter(division != 'ERROR')
+  ggplot(enrollmeans, aes(x = year, y = avg, color = division)) + geom_line()
+}
+```
+
+Plot County Using Function
+
+```{r}
+plot.state(totals1_2$statetotal)
+```
+
+### Plot County Data
+
+```{r, eval=FALSE}
+  enrollmeans <- totals1_2$countytotal %>% 
+    filter(stateAbbrv == "AL") %>% 
+    group_by(area_name, year) %>% 
+    mutate(avg = mean(measurement)) %>% 
+    #ifelse(order == "Top", 
+           arrange(avg) #ifelse(order == "Bottom", arrange(avg)) )
+          # ifelse(get(order) == "Bottom", arrange(avg), stop('ERROR')))
+  num <- enrollmeans[1:100,]
+  ggplot(num, aes(x = year, y = avg, color = area_name)) +geom_line()
+```
+
+Create Function for Plotting County
+
+```{r}
+plot.county <- function(df, st = 'AL', top = TRUE, var_name = "measurement", x = 5){
+  enrollcounty <- df %>% 
+    filter(stateAbbrv == st) %>% 
+    group_by(area_name, year) %>% 
+    mutate(avg = mean(get(var_name)))
+    if (top) { 
+      enrollcounty <- arrange(enrollcounty, desc(avg)) 
+    } else {enrollcounty <- arrange(enrollcounty, avg)
+      }
+  num <- enrollcounty[1:x,]
+  
+  ggplot(num, aes(x = year, y = avg, color = area_name)) +geom_line()
+  
+}
+```
+
+Plot County Using Function
+
+```{r}
+plot.county(totals1_2$countytotal, top = FALSE, x =100)
+```
+
+# Put it Together
+
+### Plot Specific States
+
+```{r}
+#state=NC, group=top, number looked at being 10
+plot.county(totals1_2$countytotal, st= "NC", top = TRUE, x=10)
+#state=AZ, group=bottom, number looked at being 6
+plot.county(totals1_2$countytotal, st= "AZ", top = FALSE, x=6)
+#defaults
+plot.county(totals1_2$countytotal)
+#state=OH, group=top, number looked at being 8
+plot.county(totals1_2$countytotal, st= "OH", top = TRUE, x=8)
+```
+
+### Read in and Process other Data
+
+Run data processing function on alternate data sets
+```{r, message=FALSE}
+data3 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01a.csv")
+data4 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01b.csv")
+data5 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01c.csv")
+data6 <- my_wrapper("https://www4.stat.ncsu.edu/~online/datasets/PST01d.csv")
+```
+
+### Combine Data
+
+Run combining function on PST01 data sets
+```{r}
+totals3_4 <- combine(data3$county, data3$state, data4$county, data4$state)
+totals5_6 <- combine(data5$county, data5$state, data6$county, data6$state)
+
+totalPST <- combine(totals3_4$countytotal, totals3_4$statetotal, totals5_6$countytotal, totals5_6$statetotal)
+```
+
+### Plot Data
+
+Plot PST state
+
+```{r}
+plot.state(totalPST$statetotal)
+```
+
+Plot PST county
+
+```{r}
+#state=PA, group=top, number looked at being 5
+plot.county(totalPST$countytotal, st= "PA", top = TRUE, x=5)
+#state=TX, group=bottom, number looked at being 12
+plot.county(totalPST$countytotal, st= "TX", top = FALSE, x=12)
+#defaults
+plot.county(totalPST$countytotal)
+#state=NY, group=top, number looked at being 6
+plot.county(totalPST$countytotal, st= "NY", top = TRUE, x=6)
+```
